@@ -1,0 +1,9 @@
+---
+- name: Deploy PostgreSQL via Docker
+  hosts: my_hosts
+  become: true
+  roles:
+    - configure-srv
+    - deploy-sql
+    - minio
+    - deploy-app

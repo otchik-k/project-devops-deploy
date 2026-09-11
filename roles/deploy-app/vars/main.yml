@@ -1,0 +1,42 @@
+---
+# Параметры образа
+image_name: otchikk/project-bulletin-board
+image_tag: latest
+
+postgres_container_name: "postgresql"
+
+# Параметры контейнера
+container_name: bulletin-board
+app_ports:
+  - "8080:8080"
+  - "9090:9090"
+
+# Каталоги НА ХОСТЕ
+app_base_dir: "/opt/{{ container_name }}"
+app_data_dir: "{{ app_base_dir }}/data"
+app_logs_dir: "{{ app_base_dir }}/logs"
+
+# Пути ВНУТРИ КОНТЕЙНЕРА
+container_data_dir: /app/data
+container_logs_dir: /app/logs
+
+# JAVA_OPTS с указанием пути к логам (базовые настройки, профиль определяется в group_vars)
+java_opts_base: >-
+  -Xms{{ java_memory_min | default('256m') }}
+  -Xmx{{ java_memory_max | default('512m') }}
+  -Dlogging.file.path={{ container_logs_dir }}
+
+java_opts: "{{ java_opts_base }} -Dspring.profiles.active={{ spring_profile | default('dev') }}"
+
+logging_level_root: WARN
+
+spring_datasource_url: "jdbc:postgresql://{{ postgres_container_name }}:5432/{{ db_name }}"
+spring_datasource_username: "{{ db_user }}"
+spring_datasource_password: "{{ db_password }}"
+
+storage_s3_bucket: "bulletin-board"
+storage_s3_region: "us-east-1"
+storage_s3_accesskey: "{{ s3_access_key }}"
+storage_s3_secretkey: "{{ s3_secret_key }}"
+storage_s3_endpoint: "http://minio:9000"
+storage_s3_cdnurl: "http://minio:9000"

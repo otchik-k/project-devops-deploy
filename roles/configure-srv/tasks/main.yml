@@ -1,0 +1,112 @@
+---
+- name: Install required packages
+  apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg
+      - software-properties-common
+      - ufw
+    state: present
+    update_cache: yes
+
+- name: Install python3-psycopg2
+  apt:
+    name: python3-psycopg2
+    state: present
+    update_cache: yes
+  become: yes
+
+- name: Install psycopg2 for PostgreSQL management
+  apt:
+    name: python3-psycopg2
+    state: present
+    update_cache: yes
+  become: yes
+
+- name: Create keyrings directory
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+
+- name: Add Docker GPG key
+  get_url:
+    url: "https://download.docker.com/linux/ubuntu/gpg"
+    dest: /etc/apt/keyrings/docker.asc
+    mode: '0644'
+
+- name: Add Docker repository
+  deb822_repository:
+    name: docker
+    types: deb
+    uris: "https://download.docker.com/linux/ubuntu"
+    suites: "resolute" 
+    components: stable
+    architectures: amd64
+    signed_by: /etc/apt/keyrings/docker.asc
+    state: present
+
+- name: Install Docker packages
+  apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+    update_cache: yes
+
+- name: Ensure Docker service is started and enabled
+  systemd:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: Add remote user to docker group
+  user:
+    name: "{{ ansible_user | default('kirill') }}"
+    groups: docker
+    append: yes
+
+# --- БЛОК НАСТРОЙКИ FIREWALL (UFW) ---
+
+# всё входящее запрещено, всё исходящее разрешено
+- name: Set default UFW policy to deny incoming
+  community.general.ufw:
+    default: deny
+    direction: incoming
+
+- name: Set default UFW policy to allow outgoing
+  community.general.ufw:
+    default: allow
+    direction: outgoing
+
+# ssh порт
+- name: Allow SSH access
+  community.general.ufw:
+    rule: allow
+    port: "{{ ssh_port }}"
+    proto: tcp
+
+# веб-порты
+- name: Allow HTTP and HTTPS
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop: "{{ web_ports }}"
+
+# порты приложения
+- name: Allow Application ports
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop: "{{ firewall_ports }}"
+
+- name: Enable UFW
+  community.general.ufw:
+    state: enabled

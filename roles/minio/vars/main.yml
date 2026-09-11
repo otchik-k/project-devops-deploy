@@ -1,0 +1,13 @@
+---
+minio_container_name: "minio"
+minio_image: "minio/minio:latest"
+minio_data_dir: "/opt/minio/data"
+minio_network_name: "bulletin-network"
+minio_bucket: "bulletin-board"
+minio_ports:
+        - "9000:9000"   # S3 API
+        - "9001:9001"
+minio_container_name: "minio"
+minio_host: "minio"
+minio_api_port: "9000"
+storage_s3_bucket: "bulletin-board"
