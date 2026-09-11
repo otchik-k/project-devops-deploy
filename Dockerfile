@@ -1,13 +1,19 @@
-# Stage 1: Build
-FROM eclipse-temurin:21-jdk-alpine AS builder
+FROM node:20-alpine AS frontend-build
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm ci
+COPY frontend/ .
+RUN npm run build
+
+FROM gradle:8-jdk21 AS backend-build
 WORKDIR /app
 COPY . .
-RUN ./gradlew build -x test
+COPY --from=frontend-build /app/frontend/dist/. src/main/resources/static/
+RUN ./gradlew bootJar
 
-# Stage 2: Runtime
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
-COPY --from=builder --chown=appuser:appgroup /app/build/libs/*.jar app.jar
+COPY --from=backend-build /app/build/libs/*.jar /app/app.jar
 EXPOSE 8080 9090
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
