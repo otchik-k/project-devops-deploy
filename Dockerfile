@@ -1,51 +1,62 @@
-FROM eclipse-temurin:21-jdk-alpine AS builder
+# ─────────────────────────────────────────────
+# Dev Dockerfile — бекенд и фронтенд в одном контейнере
+# Для локальной разработки с hot-reload
+# ─────────────────────────────────────────────
 
-# Установка зависимостей для сборки фронтенда
-RUN apk add --no-cache nodejs npm make git curl
+FROM eclipse-temurin:21-jdk AS backend-base
 
 WORKDIR /app
 
-# Копируем исходники
-COPY . .
+# Установка Node.js для сборки фронтенда
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    && curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
 
-# --- Сборка Фронтенда ---
+# Копируем Gradle-файлы для кеширования
+COPY gradle/ gradle/
+COPY gradlew ./
+RUN chmod +x gradlew
+COPY build.gradle* settings.gradle* gradle.properties* ./
+
+# Скачиваем зависимости бекенда
+RUN ./gradlew dependencies --no-daemon
+
+# Копируем исходники бекенда
+COPY src/ src/
+
+# ─────────────────────────────────────────────
+# Фронтенд
+# ─────────────────────────────────────────────
 WORKDIR /app/frontend
-RUN npm install
-RUN npm run build
 
-# Возвращаемся в корень для сборки Бэкенда
+COPY frontend/package.json frontend/package-lock.json* ./
+RUN npm ci
+
+COPY frontend/ ./
+
+# ─────────────────────────────────────────────
+# Runtime
+# ─────────────────────────────────────────────
 WORKDIR /app
-# Сборка Spring Boot приложения (создаст jar в build/libs/)
-RUN ./gradlew clean bootJar -x test
 
-# --- Финальный образ ---
-FROM eclipse-temurin:21-jre-alpine
+EXPOSE 8080 9090 5173
 
-# Переменные окружения для режима DEV
-ENV SPRING_PROFILES_ACTIVE=dev \
-    MANAGEMENT_SERVER_PORT=9090 \
-    JAVA_OPTS="-Xms256m -Xmx512m"
+# Переменные окружения для подключения к внешним сервисам
+# SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/bulletins
+# SPRING_DATASOURCE_USERNAME=postgres
+# SPRING_DATASOURCE_PASSWORD=postgres
+# STORAGE_S3_ENDPOINT=http://minio:9000
+# STORAGE_S3_ACCESSKEY=minioadmin
+# STORAGE_S3_SECRETKEY=minioadmin
+# STORAGE_S3_BUCKET=bulletins
+# STORAGE_S3_REGION=us-east-1
 
-# Создаем пользователя для безопасности (не root)
-RUN addgroup -g 1000 appgroup && \
-    adduser -u 1000 -G appgroup -s /bin/sh -D appuser
+ENV SPRING_PROFILES_ACTIVE=dev
 
-USER appuser
-WORKDIR /home/appuser
-
-# Копируем артефакты из стадии builder
-# 1. Jar файл бэкенда
-COPY --from=builder /app/build/libs/project-devops-deploy-*.jar app.jar
-# 2. Статические файлы фронтенда (dist) в папку static, которую Spring автоматически отдает
-COPY --from=builder /app/frontend/dist /home/appuser/static
-
-# Точка монтирования для временных файлов (изображения в dev режиме)
-VOLUME ["/home/appuser/images"]
-
-# Порты: 8080 (API + Frontend), 9090 (Actuator/Monitoring)
-EXPOSE 8080 9090
-
-# Команда запуска
-# Мы не используем Vite dev server, а отдаем собранный dist через Spring Boot.
-# Это единственный способ запустить React и Spring в одном процессе.
-CMD ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+# Запускаем бекенд и фронтенд одновременно
+# Бекенд: Spring Boot с devtools для hot-reload
+# Фронтенд: Vite dev server с проксированием на бекенд
+CMD ["sh", "-c", "(cd /app/frontend && npm run dev -- --host 0.0.0.0) & exec ./gradlew bootRun --no-daemon"]
