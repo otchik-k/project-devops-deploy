@@ -57,7 +57,4 @@ RUN mkdir -p /tmp/bulletin-images
 
 EXPOSE 8080 9090
 
-HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
-  CMD curl -f http://localhost:9090/actuator/health || exit 1
-
 ENTRYPOINT ["sh", "-c", "java ${JAVA_OPTS:-\"\"} -jar /app/app.jar"]
