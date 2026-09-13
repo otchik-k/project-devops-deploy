@@ -34,7 +34,7 @@
     container: "{{ minio_container_name }}"
     command: >
       /bin/sh -c "
-      until curl -f http://localhost:9000/minio/health/live; do
+      until curl -f http://rdgw.kptech.ru:29000/minio/health/live; do
         echo 'Waiting for MinIO...';
         sleep 2;
       done
@@ -75,3 +75,9 @@
     container: "{{ minio_container_name }}"
     command: >
       mc admin policy attach local readwrite --user {{ s3_access_key }}
+
+- name: Set bucket policy to public for read access
+  community.docker.docker_container_exec:
+    container: "{{ minio_container_name }}"
+    command: >
+      mc anonymous set public local/{{ storage_s3_bucket }}
