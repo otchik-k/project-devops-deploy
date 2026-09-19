@@ -34,6 +34,8 @@
     env:
       MINIO_ROOT_USER: "{{ minio_root_user }}"
       MINIO_ROOT_PASSWORD: "{{ minio_root_password }}"
+      MINIO_DOMAIN: "minio"
+      MINIO_API_CORS_ALLOW_ORIGIN: "http://rdgw.kptech.ru:8080"
     networks:
       - name: "{{ bulletin_network_name }}"
         aliases:
@@ -61,4 +63,3 @@
     quay.io/minio/mc:latest
     -c "mc mb minio/{{ minio_bucket_name }} --ignore-existing && mc anonymous set download minio/{{ minio_bucket_name }} || true"
   changed_when: false
-
