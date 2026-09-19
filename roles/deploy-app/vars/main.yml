@@ -34,7 +34,7 @@ spring_datasource_url: "jdbc:postgresql://{{ postgres_container_name }}:5432/{{ 
 spring_datasource_username: "{{ db_user }}"
 spring_datasource_password: "{{ db_password }}"
 
-storage_s3_bucket: "bulletin-board"
+storage_s3_bucket: "bulletins"
 storage_s3_region: "us-east-1"
 storage_s3_accesskey: "{{ s3_access_key }}"
 storage_s3_secretkey: "{{ s3_secret_key }}"
