@@ -1,12 +1,11 @@
 ---
 postgres_image: "postgres:15"
-postgres_container_name: "postgresql"
 postgres_data_dir: "/var/lib/postgresql/data"
-postgres_network_name: "bulletin-network"
+
 postgres_ports:
-    - "5432:5432"
+  - "5432:5432"
 
 postgres_env:
-      POSTGRES_USER: "{{ db_user }}"
-      POSTGRES_PASSWORD: "{{ db_password }}"
-      POSTGRES_DB: "{{ db_name }}"
+  POSTGRES_USER: "{{ db_user }}"
+  POSTGRES_PASSWORD: "{{ db_password }}"
+  POSTGRES_DB: "{{ db_name }}"

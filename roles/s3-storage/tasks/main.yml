@@ -1,140 +1,64 @@
+---
 - name: Create data directory
-  file:
+  ansible.builtin.file:
     path: "{{ minio_data_dir }}"
     state: directory
     mode: "0755"
+    owner: root
+    group: root
 
-- name: Create Docker network
-  community.docker.docker_network:
-    name: "{{ minio_network_name }}"
-    state: present
+- name: Create config directory
+  ansible.builtin.file:
+    path: "/opt/minio"
+    state: directory
+    mode: "0755"
+
+- name: Pull MinIO image
+  community.docker.docker_image:
+    name: "{{ minio_image }}"
+    source: pull
+    force_source: true
 
 - name: Run MinIO container
   community.docker.docker_container:
     name: "{{ minio_container_name }}"
     image: "{{ minio_image }}"
-    state: started
+    command: >-
+      server --console-address ":{{ minio_console_port }}" /data
     restart_policy: unless-stopped
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "{{ minio_api_port }}:9000"
+      - "{{ minio_console_port }}:{{ minio_console_port }}"
+    volumes:
+      - "{{ minio_data_dir }}:/data"
     env:
       MINIO_ROOT_USER: "{{ minio_root_user }}"
       MINIO_ROOT_PASSWORD: "{{ minio_root_password }}"
-    volumes:
-      - "{{ minio_data_dir }}:/data"
     networks:
-      - name: "{{ minio_network_name }}"
+      - name: "{{ bulletin_network_name }}"
         aliases:
-          - "{{ minio_host }}"
-    command: server /data --console-address ":9001"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+          - "bulletin.minio"
+    state: started
+    comparisons:
+      "*": strict
 
 - name: Wait for MinIO to be ready
-  uri:
-    url: "http://127.0.0.1:9000/minio/health/live"
+  ansible.builtin.uri:
+    url: "http://localhost:9000/minio/health/live"
     method: GET
+    return_content: true
     status_code: 200
-  register: health
-  retries: 15
+  register: minio_health
+  retries: 10
   delay: 3
-  until: health.status == 200
+  until: minio_health.status == 200
 
-- name: Configure mc alias
-  shell: |
-    docker exec {{ minio_container_name }} mc alias set local \
-      http://localhost:9000 \
-      {{ minio_root_user }} \
-      {{ minio_root_password }} \
-      --api s3v4
+- name: Create MinIO bucket
+  ansible.builtin.command: >
+    docker run --rm --network {{ bulletin_network_name }}
+    --entrypoint sh
+    -e MC_HOST_minio="http://{{ minio_root_user }}:{{ minio_root_password }}@{{ minio_container_name }}:9000"
+    quay.io/minio/mc:latest
+    -c "mc mb minio/{{ minio_bucket_name }} --ignore-existing && mc anonymous set download minio/{{ minio_bucket_name }} || true"
   changed_when: false
 
-- name: Create service account (appuser)
-  shell: |
-    docker exec {{ minio_container_name }} mc admin user add \
-      local {{ s3_access_key }} {{ s3_secret_key }}
-  register: user_result
-  failed_when: >
-    user_result.rc != 0 and
-    'already exists' not in user_result.stderr
-  changed_when: "'added' in user_result.stdout | lower"
-
-- name: Create bucket
-  shell: |
-    docker exec {{ minio_container_name }} mc mb --ignore-existing local/{{ storage_s3_bucket }}
-  register: bucket_result
-  changed_when: "'created' in bucket_result.stdout | lower"
-
-- name: Write policy JSON to data dir
-  copy:
-    content: |
-      {
-        "Version": "2012-10-17",
-        "Statement": [
-          {
-            "Effect": "Allow",
-            "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:ListBucket"],
-            "Resource": [
-              "arn:aws:s3:::{{ storage_s3_bucket }}",
-              "arn:aws:s3:::{{ storage_s3_bucket }}/*"
-            ]
-          }
-        ]
-      }
-    dest: "{{ minio_data_dir }}/appuser-policy.json"
-    mode: "0644"
-
-- name: Create readwrite policy for appuser
-  shell: |
-    docker exec {{ minio_container_name }} mc admin policy create \
-      local appuser-rw /data/appuser-policy.json
-  register: policy_create
-  failed_when: >
-    policy_create.rc != 0 and
-    'already exists' not in policy_create.stderr
-  changed_when: "'created' in policy_create.stdout | lower or 'added' in policy_create.stdout | lower"
-
-- name: Attach policy to appuser
-  shell: |
-    docker exec {{ minio_container_name }} mc admin policy attach \
-      local appuser-rw --user {{ s3_access_key }}
-  register: policy_attach
-  failed_when: policy_attach.rc != 0
-  changed_when: false
-
-- name: Generate .env file
-  copy:
-    content: |
-      STORAGE_S3_BUCKET={{ storage_s3_bucket }}
-      STORAGE_S3_REGION={{ s3_region }}
-      STORAGE_S3_ENDPOINT={{ s3_endpoint }}
-      STORAGE_S3_ACCESSKEY={{ s3_access_key }}
-      STORAGE_S3_SECRETKEY={{ s3_secret_key }}
-      STORAGE_S3_CDNURL={{ s3_cdn_url }}
-    dest: "{{ minio_data_dir }}/.env.app"
-    mode: "0600"
-
-- name: Show deployment info
-  debug:
-    msg: |
-      ✅ MinIO развёрнут из quay.io!
-
-      S3 API (внутри Docker-сети): {{ s3_endpoint }}
-      S3 API (снаружи):            http://{{ ansible_host }}:9000
-      Web Console:                 http://{{ ansible_host }}:9001
-      Bucket:                      {{ storage_s3_bucket }}
-      CDN URL:                     {{ s3_cdn_url }}
-
-      Root credentials:
-        User: {{ minio_root_user }}
-        Pass: {{ minio_root_password }}
-
-      App credentials:
-        Access Key: {{ s3_access_key }}
-        Secret Key: {{ s3_secret_key }}
-
-      .env файл: {{ minio_data_dir }}/.env.app

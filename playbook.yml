@@ -6,4 +6,4 @@
   #  - configure-srv
   #  - deploy-sql
     - s3-storage
-  #  - deploy-app
+    - deploy-app

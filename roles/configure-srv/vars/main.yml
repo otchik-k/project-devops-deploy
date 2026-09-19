@@ -1,9 +1,10 @@
 ---
-spring_profile: dev
 ssh_port: 22
 firewall_ports:
     - 8080
     - 9090
+    - 9000
+    - 9001
 web_ports:
     - 80
     - 443

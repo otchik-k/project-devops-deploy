@@ -1,0 +1,4 @@
+bulletin_network_name: "bulletin-network"
+postgres_container_name: "postgresql"
+minio_container_name: "minio"
+minio_bucket_name: "bulletin"

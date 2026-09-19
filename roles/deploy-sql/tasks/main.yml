@@ -1,12 +1,7 @@
 ---
-- name: Ensure Docker is installed
-  ansible.builtin.package:
-    name: docker.io
-    state: present
-
 - name: Ensure the custom network exists
-  docker_network:
-    name: "{{ postgres_network_name }}"
+  community.docker.docker_network:
+    name: "{{ bulletin_network_name }}"
     driver: bridge
     state: present
 
@@ -17,12 +12,12 @@
     mode: '0755'
 
 - name: Pull the PostgreSQL Docker image
-  docker_image:
+  community.docker.docker_image:
     name: "{{ postgres_image }}"
     source: pull
 
 - name: Run PostgreSQL container
-  docker_container:
+  community.docker.docker_container:
     name: "{{ postgres_container_name }}"
     image: "{{ postgres_image }}"
     restart_policy: always
@@ -30,6 +25,6 @@
     volumes:
       - "{{ postgres_data_dir }}:/var/lib/postgresql/data"
     networks:
-      - name: "{{ postgres_network_name }}"
+      - name: "{{ bulletin_network_name }}"
     ports: "{{ postgres_ports }}"
     state: started
