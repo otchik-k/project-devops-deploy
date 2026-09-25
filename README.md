@@ -197,3 +197,112 @@ Override the host/port with `MANAGEMENT_SERVER_PORT` if you changed it; no Prome
     - Image shows up in bulletin show view (URL should either point to CDN or be a presigned S3 link).
     - Object exists in S3 bucket (check via AWS console or `aws s3 ls s3://your-bucket/bulletins/...`).
 5. Optional: run `curl -I "$(curl -s .../api/files/view?key=... | jq -r .url)"` to ensure the presigned URL is valid from the production environment.
+
+# project-devops-deploy
+
+Автоматизированное развёртывание веб-приложения с использованием Ansible.
+
+Деплой приложения в режиме разработки
+```bash
+make full-deploy-dev
+```
+Деплой приложения в режиме PROD
+```bash
+full-deploy-prod
+```
+
+## Структура
+
+```
+project-devops-deploy/
+├── playbook.yml                  # Основной плейбук
+├── inventory.ini                 # Инвентарь (целевые хосты)
+├── requirements.yml              # Внешние роли из Ansible Galaxy
+├── group_vars/
+│   └── all/
+│       └── main.yml              # Глобальные переменные (домен, пути, профиль)
+├── roles/
+│   ├── nginx/                    # Обёртка над geerlingguy.nginx
+│   │   ├── tasks/
+│   │   │   └── main.yml          # Создание webroot + include_role
+│   │   ├── vars/
+│   │   │   └── main.yml          # Описания vhost'ов (HTTP-only и полный)
+│   │   └── handlers/
+│   │       └── main.yml          # Handler: Reload Nginx
+│   ├── certbot/                  # Обёртка над geerlingguy.certbot
+│   │   ├── tasks/
+│   │   │   └── main.yml          # include_role
+│   │   └── vars/
+│   │       └── main.yml          # Настройки Certbot (email, домены, cron)
+│   ├── geerlingguy.nginx/        # Скачанная роль (не редактировать)
+│   └── geerlingguy.certbot/      # Скачанная роль (не редактировать)
+```
+
+## Требования
+
+- Ansible >= 2.10
+- Python 3 на управляющей машине и целевом сервере
+- Целевой сервер: Ubuntu 20.04 / 22.04 (или любой Debian-based)
+- DNS-запись домена, указывающая на IP целевого сервера
+- Открытые порты 80 и 443 (firewall / security groups)
+
+## Установка
+
+### 1. Клонировать репозиторий
+
+```bash
+git clone <repo-url>
+cd project-devops-deploy
+```
+
+### 2. Скачать внешние роли
+
+```bash
+ansible-galaxy install -r requirements.yml -p ./roles/
+```
+
+### 3. Настроить переменные
+
+Отредактируйте `group_vars/all/main.yml`:
+
+```yaml
+nginx_server_name: "rdgw.kptech.ru"    # ваш домен
+nginx_webroot_path: "/var/www/html"    # путь для ACME-проверки
+spring_profile: prod                   # профиль Spring Boot
+```
+
+Отредактируйте `roles/certbot/vars/main.yml`:
+
+```yaml
+certbot_admin_email: "admin@example.com"  # ваш email для Let's Encrypt
+certbot_auto_renew_user: "kirill"          # пользователь для cron
+```
+
+### 4. Настроить инвентарь
+
+Отредактируйте `inventory.ini`:
+
+```ini
+[my_hosts]
+80.240.52.147 ansible_user=kirill
+```
+
+### 5. Запустить плейбук
+
+```bash
+ansible-playbook -i inventory.ini playbook.yml -e "spring_profile=prod" -v
+```
+
+### Продление сертификатов
+
+- Cron-задача запускается ежедневно в 03:30 (`certbot_auto_renew_hour/minute`).
+- После успешного продления Certbot вызывает deploy-hook:
+  `/etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh`
+- Скрипт выполняет `systemctl reload nginx`.
+
+Проверка автообновления:
+
+```bash
+sudo certbot renew --dry-run
+```
+

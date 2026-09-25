@@ -1,0 +1,14 @@
+---
+certbot_admin_email: "otchikkirill@yandex.ru"
+certbot_auto_renew_user: "kirill"
+certbot_auto_renew_hour: "03"
+certbot_auto_renew_minute: "30"
+certbot_auto_renew_options: "--quiet"
+
+certbot_create_if_missing: true
+certbot_create_method: "webroot"
+
+certbot_certs:
+  - domains:
+      - "{{ nginx_server_name }}"
+    webroot: "{{ nginx_webroot_path }}"

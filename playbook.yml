@@ -1,9 +1,62 @@
 ---
-- name: Deploy PostgreSQL via Docker
+- name: Deploy app
   hosts: my_hosts
   become: true
+
+  pre_tasks:
+    # 1. Проверяем, есть ли сертификат
+    - name: Check if SSL certificate exists
+      stat:
+        path: "/etc/letsencrypt/live/{{ nginx_server_name }}/fullchain.pem"
+      register: ssl_cert
+
+    # 2. Выбираем конфиг Nginx в зависимости от наличия сертификата
+    - name: Set HTTP-only vhosts (no cert yet)
+      set_fact:
+        nginx_vhosts: "{{ nginx_vhosts_http_only }}"
+      when: not ssl_cert.stat.exists
+
+    - name: Set full vhosts (cert already exists)
+      set_fact:
+        nginx_vhosts: "{{ nginx_vhosts_full }}"
+      when: ssl_cert.stat.exists
+
   roles:
-    - configure-srv
-    - deploy-sql
-    - s3-storage
-    - deploy-app
+  #  - configure-srv
+  #  - deploy-sql
+  #  - s3-storage
+  #  - deploy-app
+    - nginx
+    - geerlingguy.certbot
+
+  post_tasks:
+      # Если сертификат появился только что — пересоздаем конфиг Nginx с HTTPS
+      - name: Check if SSL was just issued
+        stat:
+          path: "/etc/letsencrypt/live/{{ nginx_server_name }}/fullchain.pem"
+        register: ssl_cert_now
+
+      - name: Reconfigure Nginx with HTTPS (cert just issued)
+        block:
+          - name: Switch to full vhosts
+            set_fact:
+              nginx_vhosts: "{{ nginx_vhosts_full }}"
+
+          - name: Re-run nginx role with HTTPS config
+            include_role:
+              name: nginx
+
+          - name: Reload Nginx
+            service:
+              name: nginx
+              state: reloaded
+        when: not ssl_cert.stat.exists and ssl_cert_now.stat.exists
+
+      # Создаем хук для автообновления, чтобы Nginx перезагружался сам
+      - name: Create certbot renewal deploy hook
+        copy:
+          dest: /etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh
+          content: |
+            #!/bin/bash
+            systemctl reload nginx
+          mode: '0755'

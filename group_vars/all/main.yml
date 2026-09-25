@@ -3,3 +3,11 @@ postgres_container_name: "postgresql"
 minio_container_name: "minio"
 minio_bucket_name: "bulletin"
 app_domain: "http://rdgw.kptech.ru:8080"
+
+# Домен и пути (используются и в nginx, и в certbot)
+nginx_server_name: "rdgw.kptech.ru"
+nginx_webroot_path: "/var/www/html"
+
+# Общие настройки безопасности
+nginx_remove_default_vhost: true
+nginx_client_max_body_size: "128m"

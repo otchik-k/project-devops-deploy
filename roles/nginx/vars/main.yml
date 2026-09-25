@@ -1,0 +1,59 @@
+---
+# Специфика роли nginx
+
+# HTTP-only конфиг
+nginx_vhosts_http_only:
+  - listen: "80"
+    server_name: "{{ nginx_server_name }}"
+    filename: "{{ nginx_server_name }}.conf"
+    extra_parameters: |
+      location /.well-known/acme-challenge/ {
+          root {{ nginx_webroot_path }};
+      }
+      location / {
+          # БЫЛО: proxy_pass http://app_backend;
+          # СТАЛО: прямой адрес
+          proxy_pass http://127.0.0.1:8080;
+          
+          proxy_set_header Host              $http_host;
+          proxy_set_header X-Real-IP         $remote_addr;
+          proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+      }
+
+# Полный конфиг (HTTP-редирект + HTTPS)
+nginx_vhosts_full:
+  # Блок HTTP: только редирект
+  - listen: "80"
+    server_name: "{{ nginx_server_name }}"
+    filename: "{{ nginx_server_name }}.conf"
+    extra_parameters: |
+      location /.well-known/acme-challenge/ {
+          root {{ nginx_webroot_path }};
+      }
+      location / {
+          return 301 https://$host$request_uri;
+      }
+  # Блок HTTPS: основной сайт
+  - listen: "443 ssl http2"
+    server_name: "{{ nginx_server_name }}"
+    filename: "{{ nginx_server_name }}.ssl.conf"
+    extra_parameters: |
+      ssl_certificate     /etc/letsencrypt/live/{{ nginx_server_name }}/fullchain.pem;
+      ssl_certificate_key /etc/letsencrypt/live/{{ nginx_server_name }}/privkey.pem;
+      
+      ssl_protocols       TLSv1.2 TLSv1.3;
+      ssl_ciphers         TLS-AES-256-GCM-SHA384:TLS-CHACHA20-POLY1305-SHA256:TLS-AES-128-GCM-SHA256;
+      
+      add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+      
+      location / {
+          # БЫЛО: proxy_pass http://app_backend;
+          # СТАЛО: прямой адрес
+          proxy_pass http://127.0.0.1:8080;
+          
+          proxy_set_header Host              $http_host;
+          proxy_set_header X-Real-IP         $remote_addr;
+          proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+      }
