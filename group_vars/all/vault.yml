@@ -1,6 +1,0 @@
-db_user: "postgres"
-db_password: "hexlet_12345"
-db_name: newstud_db
-
-minio_root_user: "minioadmin"
-minio_root_password: "minioadmin123"

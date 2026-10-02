@@ -1,4 +1,0 @@
----
-- name: Run geerlingguy.certbot role
-  include_role:
-    name: geerlingguy.certbot
