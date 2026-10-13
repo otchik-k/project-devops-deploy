@@ -1,3 +1,7 @@
+[![Docker Image CI](https://github.com/otchik-k/project-devops-deploy/actions/workflows/docker-image.yml/badge.svg)](https://github.com/otchik-k/project-devops-deploy/actions/workflows/docker-image.yml)
+[![CI](https://github.com/otchik-k/project-devops-deploy/actions/workflows/ci.yml/badge.svg)](https://github.com/otchik-k/project-devops-deploy/actions/workflows/ci.yml)
+
+
 # Project DevOps Deploy
 
 Bulletin board service.
