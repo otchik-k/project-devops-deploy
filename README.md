@@ -208,3 +208,37 @@ Override the host/port with `MANAGEMENT_SERVER_PORT` if you changed it; no Prome
 По событиям push и pull_request в главной ветке workflow запускается установка зависимостей, прогон тестов, сборка Docker-образа и публикация в выбранном реестре только после успешных тестов.
 Стратегия тегирования образов: latest + git sha-tag.
 
+## Установка при помощи ansible
+
+<!-- Опишите установку: клонирование, зависимости, переменные окружения -->
+
+```bash
+git clone https://github.com/otchik-k/devops-engineer-from-scratch-project-315.git
+cd devops-engineer-from-scratch-project-315
+
+# установка ролей
+make install-roles
+
+#Отредактируйте `group_vars/all/main.yml`:
+nginx_server_name: "rdgw.kptech.ru"    # ваш домен
+nginx_webroot_path: "/var/www/html"    # путь для ACME-проверки
+spring_profile: prod                   # профиль Spring Boot
+
+#Отредактируйте `inventory.ini`:
+[my_hosts]
+80.240.52.147 ansible_user=kirill
+
+# В файле group_vars/all/vault.yml следует указать следующие данные:
+db_user:                # пользователь для базы данных
+db_password:            # пароль пользователя базы данных
+db_name:                # имя базы данных
+minio_root_user:        # root пользователь minio (по умолчанию minioadmin)
+minio_root_password:    # пароль от root пользователя minio (поумолчанию minioadmin123)
+ssh_private_key:        # приватный ключ для подключения по ssh
+
+# деплой в режиме dev
+make full-deploy-dev
+
+# деплой в режиме prod
+make full-deploy-prod
+```
