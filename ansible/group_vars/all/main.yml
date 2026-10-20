@@ -1,0 +1,13 @@
+bulletin_network_name: "bulletin-network"
+postgres_container_name: "postgresql"
+minio_container_name: "minio"
+minio_bucket_name: "bulletin"
+domain: "rdgw.kptech.ru"
+app_port: "8080"
+management_server_port: "9090"
+minio_api_port: "9000"
+minio_console_port: "9001"
+http_port: "80"
+https_port: "443"
+
+nginx_webroot_path: "/var/www/html"

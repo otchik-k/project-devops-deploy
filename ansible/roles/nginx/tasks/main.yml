@@ -1,0 +1,12 @@
+---
+- name: Ensure webroot directory exists
+  file:
+    path: "{{ nginx_webroot_path }}"
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: '0755'
+
+- name: Configure Nginx via geerlingguy.nginx role
+  include_role:
+    name: geerlingguy.nginx

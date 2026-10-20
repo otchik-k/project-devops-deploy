@@ -1,0 +1,4 @@
+---
+minio_image: "otchikk/minio:latest"
+minio_data_dir: "/var/minio/data"
+minio_env_file: "/opt/minio/minio.env"
