@@ -33,8 +33,10 @@ docker-build:
 docker-start:
 	sudo docker run -p 8080:8080 -p 9090:9090 -e JAVA_OPTS="-Xms256m -Xmx512m -Dspring.profiles.active=dev" app_full
 	
+
+# деплой через ansible на удаленный сервер
 full-deploy-dev:
-	ansible-playbook -i inventory.ini playbook.yml --ask-vault-pass
+	ansible-playbook -i ansible/inventory.ini ansible/playbook.yml --ask-vault-pass
 
 full-deploy-prod:
-	ansible-playbook -i inventory.ini playbook.yml -e "spring_profile=prod" --ask-vault-pass
+	ansible-playbook -i ansible/inventory.ini ansible/playbook.yml -e "spring_profile=prod" --ask-vault-pass
