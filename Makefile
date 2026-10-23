@@ -35,6 +35,9 @@ docker-start:
 	
 
 # деплой через ansible на удаленный сервер
+install-roles:
+	ansible-galaxy install -r ansible/requirements.yml
+
 full-deploy-dev:
 	ansible-playbook -i ansible/inventory.ini ansible/playbook.yml --ask-vault-pass
 

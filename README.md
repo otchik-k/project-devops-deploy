@@ -242,3 +242,47 @@ make full-deploy-dev
 # деплой в режиме prod
 make full-deploy-prod
 ```
+## Обязательные метрики
+
+# Обязательные метрики node_exporter
+
+```bash
+# CPU
+# Загрузка в процентах:
+100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
+
+# Разбивка по режимам:
+avg by (mode) (rate(node_cpu_seconds_total{instance="$instance"}[5m])) * 100
+
+# Память
+# Использование памяти в процентах:
+(1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100
+
+# Диски
+# Свободное место (%):
+node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} * 100
+
+# Inodes (часто забывают):
+node_filesystem_files_free / node_filesystem_files * 100
+
+# Сеть
+# Входящий, бит/сек
+rate(node_network_receive_bytes_total{device!~"lo|veth.*|docker.*|br-.*"}[5m]) * 8
+
+# Исходящий
+rate(node_network_transmit_bytes_total{device!~"lo|veth.*|docker.*|br-.*"}[5m]) * 8
+
+# Процессы
+# Количество процессов по состоянию (running, sleeping, zombie и т. п.):
+node_procs_running
+node_procs_blocked
+
+#Zombie-процессы (алерт, если есть хоть один):
+node_procs_zombie > 0
+for 5m
+
+# Системные сервисы (systemd)
+# Статус юнитов (1 = активен, 0 = неактивен):
+node_systemd_unit_state{state="active"}
+
+```

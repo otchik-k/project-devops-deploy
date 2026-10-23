@@ -27,6 +27,7 @@
     - deploy-app
     - nginx
     - certbot
+    - geerlingguy.node_exporter
 
   post_tasks:
       - name: Check if SSL was just issued

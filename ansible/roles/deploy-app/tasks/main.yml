@@ -30,7 +30,9 @@
     restart_policy: unless-stopped
     networks:
       - name: "{{ bulletin_network_name}}"
-    ports: "127.0.0.1:{{ app_port }}:{{ app_port }}"
+    ports:
+      - "127.0.0.1:{{ app_port }}:{{ app_port }}"
+      - "127.0.0.1:{{ management_server_port }}:{{ management_server_port }}"
     volumes:
       - "{{ app_data_dir }}{{ container_data_dir }}"
       - "{{ app_logs_dir }}:{{ container_logs_dir }}"
