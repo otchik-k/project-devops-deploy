@@ -291,18 +291,19 @@ node_systemd_unit_state{state="active"}
 
 Ниже — обязательный набор метрик, которые должны собираться и отображаться на дашбордах. Они покрывают инфраструктуру (node_exporter) и приложение (Micrometer/Actuator).
 
-## Обязательные метрики
+## Основные метрики
 
-| Имя метрики | Источник | Тип | Назначение | Алерт / анализ |
-|---|---|---|---|---|
-| `node_load1` | node_exporter | Gauge | Средняя нагрузка на CPU (1 мин) | Алерт: `node_load1 > N * cores` |
-| `node_memory_MemAvailable_bytes` | node_exporter | Gauge | Доступная RAM | Алерт: `<10% от MemTotal` |
-| `node_filesystem_avail_bytes` | node_exporter | Gauge | Свободное место на дисках | Алерт: `<10% свободного места` |
-| `node_disk_io_time_seconds_total` | node_exporter | Counter | IO latency (время ожидания) | Анализ «медленных» дисков |
-| `process_uptime_seconds` | node_exporter / Micrometer | Gauge | Время жизни процесса | Проверка корректных перезапусков |
-| `http_server_requests_seconds_count` | Micrometer | Counter | Число HTTP-запросов | Анализ RPS и роста нагрузки |
-| `http_server_requests_seconds_sum` | Micrometer | Counter | Длительность запросов (сумма) | Расчёт среднего времени ответа |
-| `http_server_requests_seconds_max` | Micrometer | Gauge | Максимальная длительность (99-й перцентиль) | Выявление аномальных задержек |
-| `jvm_memory_used_bytes` | Micrometer | Gauge | Использование памяти JVM | Алерт: высокий % heap |
-| `tomcat_global_error_total` | Micrometer | Counter | Ошибки веб-сервера | Рост числа ошибок 5xx |
-| `spring_kafka_listener_exceptions_total` | Micrometer | Counter | Ошибки Kafka-консьюмеров | Мониторинг стабильности очередей |
+| Метрика | Тип | Назначение | PromQL / анализ | Критичность |
+|---------|-----|------------|-----------------|-------------|
+| `node_cpu_seconds_total` | Counter | Утилизация CPU по режимам | `(1 - avg by (instance, mode) (irate(node_cpu_seconds_total{mode="idle"}[5m]))) * 100` | Высокая |
+| `node_memory_MemAvailable_bytes` | Gauge | Риск OOM (нехватка памяти) | `node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes * 100` | Критическая |
+| `node_memory_MemTotal_bytes` | Gauge | База для расчёта процентов памяти | Используется в знаменателе для нормализации | Средняя |
+| `node_filesystem_avail_bytes` | Gauge | Свободное место на диске | `100 - (avail / size) * 100` | Критическая |
+| `node_filesystem_size_bytes` | Gauge | Полный размер раздела | База для расчётов | Средняя |
+| `node_filesystem_files_free` | Gauge | Свободные inodes (файлы) | Контроль исчерпания файловых дескрипторов | Высокая |
+| `node_network_receive_bytes_total` | Counter | Входящий сетевой трафик | `irate(...[5m]) * 8` (бит/с) | Средняя |
+| `node_network_transmit_bytes_total` | Counter | Исходящий сетевой трафик | `irate(...[5m]) * 8` (бит/с) | Средняя |
+| `node_procs_running` | Gauge | Процессы в очереди на CPU | Мониторинг всплесков нагрузки | Средняя |
+| `node_procs_blocked` | Gauge | Процессы, ожидающие IO | Проблемы с дисками/сетью | Средняя |
+| `node_procs_zombie` | Gauge | Зомби‑процессы | Алерт при `>0` более 5 минут | Высокая |
+| `node_systemd_unit_state` | Gauge | Статус сервисов (systemd) | `node_systemd_unit_state{state="failed"} == 1` | Критическая |
