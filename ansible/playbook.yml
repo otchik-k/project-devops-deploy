@@ -20,14 +20,14 @@
       when: ssl_cert.stat.exists
 
   roles:
-    - configure-srv
-    - geerlingguy.docker
-    - deploy-sql
-    - s3-storage
-    - deploy-app
+    #- configure-srv
+    #- geerlingguy.docker
+    #- deploy-sql
+    #- s3-storage
+    #- deploy-app
     - nginx
     - certbot
-    - geerlingguy.node_exporter
+    #- geerlingguy.node_exporter
 
   post_tasks:
       - name: Check if SSL was just issued

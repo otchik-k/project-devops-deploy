@@ -286,3 +286,23 @@ for 5m
 node_systemd_unit_state{state="active"}
 
 ```
+
+# Observability: Prometheus Metrics
+
+Ниже — обязательный набор метрик, которые должны собираться и отображаться на дашбордах. Они покрывают инфраструктуру (node_exporter) и приложение (Micrometer/Actuator).
+
+## Обязательные метрики
+
+| Имя метрики | Источник | Тип | Назначение | Алерт / анализ |
+|---|---|---|---|---|
+| `node_load1` | node_exporter | Gauge | Средняя нагрузка на CPU (1 мин) | Алерт: `node_load1 > N * cores` |
+| `node_memory_MemAvailable_bytes` | node_exporter | Gauge | Доступная RAM | Алерт: `<10% от MemTotal` |
+| `node_filesystem_avail_bytes` | node_exporter | Gauge | Свободное место на дисках | Алерт: `<10% свободного места` |
+| `node_disk_io_time_seconds_total` | node_exporter | Counter | IO latency (время ожидания) | Анализ «медленных» дисков |
+| `process_uptime_seconds` | node_exporter / Micrometer | Gauge | Время жизни процесса | Проверка корректных перезапусков |
+| `http_server_requests_seconds_count` | Micrometer | Counter | Число HTTP-запросов | Анализ RPS и роста нагрузки |
+| `http_server_requests_seconds_sum` | Micrometer | Counter | Длительность запросов (сумма) | Расчёт среднего времени ответа |
+| `http_server_requests_seconds_max` | Micrometer | Gauge | Максимальная длительность (99-й перцентиль) | Выявление аномальных задержек |
+| `jvm_memory_used_bytes` | Micrometer | Gauge | Использование памяти JVM | Алерт: высокий % heap |
+| `tomcat_global_error_total` | Micrometer | Counter | Ошибки веб-сервера | Рост числа ошибок 5xx |
+| `spring_kafka_listener_exceptions_total` | Micrometer | Counter | Ошибки Kafka-консьюмеров | Мониторинг стабильности очередей |
